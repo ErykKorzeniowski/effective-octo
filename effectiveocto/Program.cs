@@ -30,6 +30,7 @@ public class Program
             app.UseHsts();
         }
 
+
         app.UseHttpsRedirection();
 
         app.UseStaticFiles();
