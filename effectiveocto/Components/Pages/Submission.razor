@@ -1,0 +1,82 @@
+﻿@page "/submission"
+@using System.Collections.Generic
+@using System.Net
+@using EffectiveOcto.Data
+@using EffectiveOcto.Domain
+@inject EffectiveOctoDbContext context
+@inject IJSRuntime JSRuntime
+
+<h1>Submission</h1>
+<EditForm OnValidSubmit="HandleValidSubmit" FormName="Submission" EditContext="editContext">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="ipAddress">IP Address:</label>
+        <InputText id="ipAddress" class="form-control" @bind-Value="Model.IpAddress" />
+    </div>
+
+    <div class="form-group">
+        <label for="user">User:</label>
+        <InputText id="user" class="form-control" @bind-Value="Model.User" />
+    </div>
+
+    <div class="form-group">
+        <label for="source">Source:</label>
+        <InputText id="source" class="form-control" @bind-Value="Model.Source" list="sourceList" />
+        <datalist id="sourceList">
+            @foreach (var source in sources)
+            {
+                <option value="@source"></option>
+            }
+        </datalist>
+    </div>
+    <ValidationMessage For="() => Model" />
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+</EditForm>
+
+@code {
+    private EditContext? editContext;
+    [SupplyParameterFromForm]
+    public IpAddressSubmission Model { get; set; }
+    private ValidationMessageStore? messageStore;
+    @inject NavigationManager NavigationManager
+
+    private List<string> sources = new List<string> { "Source 1", "Source 2", "Source 3" }; // Example sources
+
+    protected override void OnInitialized()
+    {
+        Model ??= new();
+        editContext = new(Model);
+        editContext.OnValidationRequested += HandleValidationRequested;
+        messageStore = new(editContext);
+    }
+
+    private void HandleValidationRequested(object? sender,
+        ValidationRequestedEventArgs args)
+    {
+        messageStore?.Clear();
+
+        if (!IPAddress.TryParse(Model.IpAddress, out var _))
+        {
+            messageStore?.Add(() => Model.IpAddress, "Ip Address is invalid.");
+        }
+        var ipAddressExists = context.IpAddressSubmissions.FirstOrDefault(x => x.IpAddress == Model.IpAddress);
+        if(ipAddressExists != null)
+        {
+            messageStore?.Add(() => Model.IpAddress, $"Ip Address already exists. Created by: {Model.User}, Created date: {Model.CreateDate}, Source: {Model.Source}");
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        // Handle the form submission here, e.g., save the data to a database
+        Model.CreateDate = DateTime.UtcNow;
+        context.Add(Model);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/");
+
+        Console.WriteLine("Form submitted successfully.");
+    }
+}

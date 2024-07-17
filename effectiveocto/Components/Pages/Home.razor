@@ -1,0 +1,49 @@
+﻿@page "/"
+@using EffectiveOcto.Domain
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+
+@inject EffectiveOcto.Data.EffectiveOctoDbContext context
+
+<PageTitle>Used Ip Addresses by Hoggers</PageTitle>
+<h1> Used Ip Addresses by Hoggers </h1>
+
+<div class="grid">
+    <div class="search-box">
+        <input type="search" autofocus @bind="nameFilter" ValueChanged="NameChanged" placeholder="Ip address... " />
+    </div>
+    <QuickGrid Items="@FilteredItems" Pagination="@pagination">
+        <PropertyColumn Property="@(p => p.IpAddress)" Title="Ip Address" Class="ipaddress-name" Sortable="true" />
+        <PropertyColumn Property="p=> p.CreateDate" Title="Created Date" Sortable="true" />
+        <PropertyColumn Property="p=> p.User" Title="User" />
+        <PropertyColumn Property="p=> p.Source" Title="Source" />
+    </QuickGrid>
+</div>
+<Paginator State="@pagination" />
+@code {
+    IQueryable<IpAddressSubmission> FilteredItems
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(nameFilter))
+            {
+                return items.Where(c => c.IpAddress.Contains(nameFilter)).AsQueryable();
+            }
+
+            return items?.AsQueryable();
+        }
+    }
+    IQueryable<IpAddressSubmission>? items;
+    string nameFilter = string.Empty;
+
+    PaginationState pagination = new PaginationState { ItemsPerPage = 15 };
+    public async Task NameChanged(string value)
+    {
+        nameFilter = value;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        items = context.IpAddressSubmissions.AsQueryable();
+    }
+}
